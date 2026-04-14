@@ -30,9 +30,6 @@ def build():
     index = InvertedIndex()
     index.build()
     index.save()
-
-    docs = index.get_documents("merida")
-    print(f"First document for token 'merida' = {docs[0]}")
     return index
 
 if __name__ == "__main__":

@@ -6,43 +6,30 @@ import pickle
 import os
 
 
-def main_search(query, index):
-    movies = string_format(get_movie_data())
-    results = token_search(query, movies)
+stopwords = None
+
+def main_search(query):
+    index = InvertedIndex()
+    status = index.load()
+    if status is not None:
+        print(status)
+        return
+    tokens = tokenize(query)
 
 
-    instance = 1
-    for i, movie in enumerate(results, 1):
-        print(f"{i}. {movie["title"]}")
-
-    
-
-
-def token_search(query, movies):
-    with open(get_full_path('data/stopwords.txt')) as stopdata:
-        stopwords = stopdata.read().splitlines()
-
-    stemmer = PorterStemmer()
-    tokens = query.split()
-    stemmedtokens = []
+    docs = []
     for token in tokens:
-        if token not in stopwords:
-            stemmedtokens.append(stemmer.stem(token))
-    tokens = stemmedtokens
-    
-    results = []
-    for token in tokens:
-        for movie in movies:
-            movietitle = movie["ftitle"]
-            if token in movietitle:
-                if movietitle not in results:
-                    results.append(movie)
-    return results
+        documents = index.get_documents(token)
+        if documents is not None:
+            docs.extend(documents)
+    for i, doc in enumerate(docs):
+        if i > 4:
+            break
+        print(index.docmap[doc]["title"])
 
 
 def get_full_path(path) -> str:
     return f"{os.getcwd()}/{path}"
-
 
 
 def get_movie_data():
@@ -50,9 +37,16 @@ def get_movie_data():
         movies = json.load(moviedata)      
     return movies["movies"]
 
+def get_stop_words():
+    global stopwords
+    if stopwords is None:
+        with open(get_full_path('data/stopwords.txt')) as stopdata:
+            stopwords = stopdata.read().splitlines()
+    return stopwords
+        
 
 
-def string_format(to_format):
+def string_format(to_format): 
     match to_format:
         case str():
             to_format = to_format.lower()
@@ -68,6 +62,19 @@ def string_format(to_format):
         case _:
             return to_format
 
+def tokenize(to_format):
+    stemmer = PorterStemmer()
+    tokens = string_format(to_format.split())
+    stemmedtokens = []
+
+    for token in tokens:
+        if token not in get_stop_words():
+            stemmedtokens.append(stemmer.stem(token))
+    tokens = stemmedtokens
+    return tokens
+
+
+
 
 class InvertedIndex:
     def __init__(self):
@@ -75,16 +82,16 @@ class InvertedIndex:
         self.docmap = {}
     
     def __add_document(self, doc_id, text):
-        tokens = string_format(text.split())
+        tokens = tokenize(text)
+
         for token in tokens:
             if token not in self.index:
                 self.index[token] = set([doc_id])
             self.index[token].add(doc_id)
 
     def get_documents(self, term):
-        newterm = term.lower()
-        if newterm in self.index:
-            return sorted(list(self.index[newterm]))
+        if term in self.index:
+            return sorted(list(self.index[term]))
 
     def build(self):
         moviedata = get_movie_data()
@@ -105,6 +112,22 @@ class InvertedIndex:
         with open(docmappath, 'wb') as file:
             pickle.dump(self.docmap, file)
 
+    def load(self) -> str:
+        with open (get_full_path("cache/index.pkl"), "rb") as file_index:
+            self.index = pickle.load(file_index)
+        with open (get_full_path("cache/docmap.pkl"), "rb") as file_docmap:
+            self.docmap = pickle.load(file_docmap)
+
+        if self.docmap == {} and self.index == {}:
+            return "no pre-built index or docmap file found"
+
+        if self.index == {}:
+            return "no pre-built index file found"
+        
+        if self.docmap == {}:
+            return "no pre-built docmap file found"
+
+        return None
 
             
 
