@@ -12,6 +12,11 @@ def main() -> None:
 
     search_parser = subparsers.add_parser("build", help="Build Index and Cache files")
 
+    search_parser = subparsers.add_parser("tf", help="Prints the term frequency for the given term in the document with the given ID")
+    search_parser.add_argument("movie_id", type=str, help="Movie ID to Look through")
+    search_parser.add_argument("term", type=str, help="Term to Search in Movie")
+
+
     args = parser.parse_args()
 
 
@@ -21,7 +26,11 @@ def main() -> None:
             main_search(string_format(args.query))
         
         case "build":
-            index = build()
+            build()
+
+        case "tf":
+            termcount(int(args.movie_id), args.term)
+
 
         case _:
             parser.print_help()
@@ -31,6 +40,13 @@ def build():
     index.build()
     index.save()
     return index
+
+
+def termcount(movie_id, term):
+    print(f"Looking for {term} in Movie Number {movie_id}" )
+    index = InvertedIndex()
+    index.load()
+    print(index.get_tf(movie_id, term))
 
 if __name__ == "__main__":
     main()

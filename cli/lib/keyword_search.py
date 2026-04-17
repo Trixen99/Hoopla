@@ -4,6 +4,7 @@ import io
 from nltk.stem import PorterStemmer
 import pickle
 import os
+from collections import Counter 
 
 
 stopwords = None
@@ -14,6 +15,12 @@ def main_search(query):
     if status is not None:
         print(status)
         return
+
+    print(index.term_frequencies)
+    return
+
+
+
     tokens = tokenize(query)
 
 
@@ -74,20 +81,25 @@ def tokenize(to_format):
     return tokens
 
 
-
-
 class InvertedIndex:
     def __init__(self):
         self.index = {}
         self.docmap = {}
+        self.term_frequencies = {}
     
     def __add_document(self, doc_id, text):
         tokens = tokenize(text)
 
+        if doc_id not in self.term_frequencies:
+            self.term_frequencies[doc_id] = Counter()
+
         for token in tokens:
+            self.term_frequencies[doc_id].update([token])
             if token not in self.index:
                 self.index[token] = set([doc_id])
-            self.index[token].add(doc_id)
+            else:
+                self.index[token].add(doc_id)
+
 
     def get_documents(self, term):
         if term in self.index:
@@ -104,6 +116,7 @@ class InvertedIndex:
         fullpath = get_full_path("cache/")
         indexpath = f"{fullpath}/index.pkl"
         docmappath = f"{fullpath}/docmap.pkl"
+        freq_path = f"{fullpath}/term_frequencies.pkl"
 
         os.makedirs(fullpath, exist_ok=True)
 
@@ -111,23 +124,38 @@ class InvertedIndex:
             pickle.dump(self.index, file)
         with open(docmappath, 'wb') as file:
             pickle.dump(self.docmap, file)
+        with open(freq_path, 'wb') as file:
+            pickle.dump(self.term_frequencies, file)
+
 
     def load(self) -> str:
         with open (get_full_path("cache/index.pkl"), "rb") as file_index:
             self.index = pickle.load(file_index)
         with open (get_full_path("cache/docmap.pkl"), "rb") as file_docmap:
             self.docmap = pickle.load(file_docmap)
+        with open (get_full_path("cache/term_frequencies.pkl"), "rb") as file_freq:
+            self.term_frequencies = pickle.load(file_freq)
 
-        if self.docmap == {} and self.index == {}:
-            return "no pre-built index or docmap file found"
-
-        if self.index == {}:
-            return "no pre-built index file found"
-        
-        if self.docmap == {}:
-            return "no pre-built docmap file found"
-
+        if self.index == {} or self.term_frequencies == {} or self.docmap == {}:
+            return "one or more pre-built files missing, please re-build."
         return None
+
+    def get_tf(self, doc_id, term) -> int:
+        term_list = tokenize(term)
+        if len(term_list) > 1:
+            raise Exception("More than one token returned when retrieving term count")
+
+        token_term = term_list[0]
+        
+        if doc_id not in self.term_frequencies:
+            return 0 
+
+        if token_term not in self.term_frequencies[doc_id]:
+            return 0
+
+        return self.term_frequencies[doc_id][token_term]
+
+
 
             
 

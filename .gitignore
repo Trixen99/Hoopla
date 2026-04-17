@@ -10,3 +10,7 @@ wheels/
 .venv
 /data/
 /cache/
+
+
+# Other
+backup.py
