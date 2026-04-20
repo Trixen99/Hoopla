@@ -5,6 +5,7 @@ from nltk.stem import PorterStemmer
 import pickle
 import os
 from collections import Counter 
+import math
 
 
 stopwords = None
@@ -154,6 +155,17 @@ class InvertedIndex:
             return 0
 
         return self.term_frequencies[doc_id][token_term]
+
+    def get_bm25_idf(self, term) -> float:
+        tokens = tokenize(term)
+
+        total = 0
+        for token in tokens:
+            instances = len(self.get_documents(token))
+            total += math.log((len(self.docmap) - instances + 0.5) / (instances + 0.5) + 1)
+        return total
+
+
 
 
 
