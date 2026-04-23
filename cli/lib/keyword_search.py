@@ -9,6 +9,8 @@ import math
 
 
 stopwords = None
+BM25_K1 = 1.5
+BM25_B = 0.75
 
 def main_search(query):
     index = InvertedIndex()
@@ -87,9 +89,12 @@ class InvertedIndex:
         self.index = {}
         self.docmap = {}
         self.term_frequencies = {}
+        self.doc_lengths = {}
     
     def __add_document(self, doc_id, text):
         tokens = tokenize(text)
+
+        self.doc_lengths[doc_id] = len(tokens)
 
         if doc_id not in self.term_frequencies:
             self.term_frequencies[doc_id] = Counter()
@@ -118,6 +123,7 @@ class InvertedIndex:
         indexpath = f"{fullpath}/index.pkl"
         docmappath = f"{fullpath}/docmap.pkl"
         freq_path = f"{fullpath}/term_frequencies.pkl"
+        doc_len_path = f"{fullpath}/doc_lengths.pkl"
 
         os.makedirs(fullpath, exist_ok=True)
 
@@ -127,6 +133,8 @@ class InvertedIndex:
             pickle.dump(self.docmap, file)
         with open(freq_path, 'wb') as file:
             pickle.dump(self.term_frequencies, file)
+        with open(doc_len_path, 'wb') as file:
+            pickle.dump(self.doc_lengths, file)
 
 
     def load(self) -> str:
@@ -136,8 +144,11 @@ class InvertedIndex:
             self.docmap = pickle.load(file_docmap)
         with open (get_full_path("cache/term_frequencies.pkl"), "rb") as file_freq:
             self.term_frequencies = pickle.load(file_freq)
+        with open(get_full_path("cache/doc_lengths.pkl"), 'rb') as file_doc_len:
+            self.doc_lengths = pickle.load(file_doc_len)
 
-        if self.index == {} or self.term_frequencies == {} or self.docmap == {}:
+
+        if self.index == {} or self.term_frequencies == {} or self.docmap == {} or self.doc_lengths == {}:
             return "one or more pre-built files missing, please re-build."
         return None
 
@@ -158,12 +169,55 @@ class InvertedIndex:
 
     def get_bm25_idf(self, term) -> float:
         tokens = tokenize(term)
+        if len(tokens) > 1:
+            raise Exception("more than one token provided. Expecting only one keyword to be provided")
+        token = tokens[0]
+        instances = len(self.get_documents(token))
+        return math.log((len(self.docmap) - instances + 0.5) / (instances + 0.5) + 1)
 
-        total = 0
-        for token in tokens:
-            instances = len(self.get_documents(token))
-            total += math.log((len(self.docmap) - instances + 0.5) / (instances + 0.5) + 1)
-        return total
+
+    def get_bm25_tf(self, doc_id, term, k1=BM25_K1, b=BM25_B) -> float:
+        tf = self.get_tf(doc_id, term)
+        length_norm = 1 - b + b * (self.doc_lengths[doc_id] / self.__get_avg_doc_length())
+        bm25 = (tf * (k1 + 1)) / (tf + k1 * length_norm)
+        return bm25
+
+
+
+    def __get_avg_doc_length(self) -> float:
+        if len(self.doc_lengths) == 0:
+            return 0.0
+        count = 0
+        for key in self.doc_lengths:
+            count += self.doc_lengths[key]
+        return count / len(self.doc_lengths)
+
+
+    def bm25(self, doc_id, term):
+        bm25_tf = self.get_bm25_tf(doc_id, term)
+        bm25_idf = self.get_bm25_idf(term)
+        return bm25_tf * bm25_idf
+
+    def bm25_search(self, query, limit):
+        token_queries = tokenize(query)
+        
+        scores = {}
+        for doc_id in self.docmap:
+            if doc_id not in scores:
+                scores[doc_id] = 0.0
+
+            for query_token in token_queries:
+                scores[doc_id] += self.bm25(doc_id, query_token)
+        scores = {k: v for k, v in sorted(scores.items(), key=lambda x:x[1], reverse=True)}
+        
+        scores_return = {}
+        for i, key in enumerate(scores, 1):
+            if i > 5:
+                break
+            scores_return[key] = scores[key]
+
+        return scores_return
+
 
 
 
