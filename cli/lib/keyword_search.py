@@ -51,8 +51,8 @@ def get_stop_words():
     global stopwords
     if stopwords is None:
         with open(get_full_path('data/stopwords.txt')) as stopdata:
-            stopwords = stopdata.read().splitlines()
-    return stopwords
+            raw = stopdata.read().splitlines()
+    return raw
         
 
 
@@ -72,16 +72,14 @@ def string_format(to_format):
         case _:
             return to_format
 
-def tokenize(to_format):
+def tokenize(text):
     stemmer = PorterStemmer()
-    tokens = string_format(to_format.split())
-    stemmedtokens = []
+    text = text.lower()
+    text = text.translate(str.maketrans('', '', string.punctuation))
+    tokens = text.split()
+    tokens = [t for t in tokens if t and t not in get_stop_words()]
+    return [stemmer.stem(t) for t in tokens]
 
-    for token in tokens:
-        if token not in get_stop_words():
-            stemmedtokens.append(stemmer.stem(token))
-    tokens = stemmedtokens
-    return tokens
 
 
 class InvertedIndex:
@@ -153,11 +151,13 @@ class InvertedIndex:
         return None
 
     def get_tf(self, doc_id, term) -> int:
-        term_list = tokenize(term)
-        if len(term_list) > 1:
-            raise Exception("More than one token returned when retrieving term count")
+        #term_list = tokenize(term)
+        #if len(term_list) > 1:
+        #    raise Exception("More than one token returned when retrieving term count")
 
-        token_term = term_list[0]
+        #token_term = term_list[0]
+
+        token_term = term
         
         if doc_id not in self.term_frequencies:
             return 0 
@@ -172,7 +172,8 @@ class InvertedIndex:
         if len(tokens) > 1:
             raise Exception("more than one token provided. Expecting only one keyword to be provided")
         token = tokens[0]
-        instances = len(self.get_documents(token))
+        #instances = len(self.get_documents(token))
+        instances = len(self.index.get(token, set()))
         return math.log((len(self.docmap) - instances + 0.5) / (instances + 0.5) + 1)
 
 
@@ -184,13 +185,18 @@ class InvertedIndex:
 
 
 
+    #def __get_avg_doc_length(self) -> float:
+    #    if len(self.doc_lengths) == 0:
+    #        return 0.0
+    #    count = 0
+    #    for key in self.doc_lengths:
+    #        count += self.doc_lengths[key]
+    #    return count / len(self.doc_lengths)
+
     def __get_avg_doc_length(self) -> float:
         if len(self.doc_lengths) == 0:
             return 0.0
-        count = 0
-        for key in self.doc_lengths:
-            count += self.doc_lengths[key]
-        return count / len(self.doc_lengths)
+        return sum(self.doc_lengths.values()) / len(self.doc_lengths)
 
 
     def bm25(self, doc_id, term):
@@ -209,7 +215,6 @@ class InvertedIndex:
             for query_token in token_queries:
                 scores[doc_id] += self.bm25(doc_id, query_token)
         scores = {k: v for k, v in sorted(scores.items(), key=lambda x:x[1], reverse=True)}
-        
         scores_return = {}
         for i, key in enumerate(scores, 1):
             if i > 5:
