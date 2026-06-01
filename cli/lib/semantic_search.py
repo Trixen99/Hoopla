@@ -135,7 +135,7 @@ class SemanticSearch:
 
 class ChunkedSemanticSearch(SemanticSearch):
     def __init__(self, model_name: str = "all-MiniLM-L6-v2") -> None:
-        super().__init__(model_name)
+        super().__init__()
         self.chunk_embeddings = None
         self.chunk_metadata = None
 
@@ -147,32 +147,35 @@ class ChunkedSemanticSearch(SemanticSearch):
         chunk_metadata = []
         for document in documents:
             self.document_map[document["id"]] = document
-            if len(self.document["description"]) == 0:
+            if document["description"] == "":
                 continue
             sem_chunks = semantic_chunk(document["description"], 4, 1)
             for i, chunk in enumerate(sem_chunks):
                 chunks.append(chunk)
-                chunk_metadata.extend([{movie_idx: document["id"], chunk_idx: i, total_chunks: len(sem_chunks)}])
+                chunk_metadata.extend([{"movie_idx": document["id"], "chunk_idx": i, "total_chunks": len(sem_chunks)}])
 
-            self.chunk_embeddings = self.model.encode(chunks, show_progress_bar=True)
-            self.chunk_metadata = chunk_metadata
+        self.chunk_embeddings = self.model.encode(chunks, show_progress_bar=True)
+        self.chunk_metadata = chunk_metadata
 
-            np.save(os.path.abspath("cache/chunk_embeddings.npy"), self.chunk_embeddings)
+        np.save(os.path.abspath("cache/chunk_embeddings.npy"), self.chunk_embeddings)
 
-            with open("cache/chunk_metadata.json", "w") as f:
-                json.dump({"chunks": chunk_metadata, "total_chunks": len(all_chunks)}, f, indent=2)
+        with open("cache/chunk_metadata.json", "w") as f:
+            json.dump({"chunks": chunk_metadata, "total_chunks": len(chunks)}, f, indent=2)
 
-            return self.chunk_embeddings
+        return self.chunk_embeddings
+
+    def load_or_create_chunk_embeddings(self, documents: list[dict]) -> np.ndarray:
+        self.documents = documents
+        for document in documents:
+            self.document_map[document["id"]] = document
+        if os.path.exists(os.path.abspath("cache/chunk_embeddings.npy")) and os.path.exists(os.path.abspath("cache/chunk_metadata.json")):
+            self.chunk_embeddings = np.load("cache/chunk_embeddings.npy")
+            with open(os.path.abspath("cache/chunk_metadata.json"), 'r') as f:
+                self.chunk_metadata = json.load(f)
+        else:
+            self.chunk_embeddings = self.build_chunk_embeddings(documents)
+        return self.chunk_embeddings
+        
 
 
 
-
-
-        #self.documents = documents
-        #movie_list = []
-        #for document in documents:
-        #    self.document_map[document["id"]] = document
-        #    movie_list.append(f"{document['title']}: {document['description']}")
-        #self.embeddings = self.model.encode(movie_list,show_progress_bar=True)
-        #np.save(os.path.abspath("cache/embeddings.npy"), self.embeddings)
-        #return self.embeddings
