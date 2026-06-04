@@ -68,7 +68,13 @@ def chunk_text(text, size, overlap):
 
 def semantic_chunk(text, chunk_size, overlap):
     sentences = re.split(r"(?<=[.!?])\s+", text)
-    chunks = [" ".join(sentences[i:i + chunk_size]) for i in range(0, len(sentences), chunk_size - overlap)]
+    chunks = []
+    for i in range(0, len(sentences), chunk_size - overlap):
+        line = " ".join(sentences[i:i + chunk_size])
+        if len(line) > 0:
+            chunks.append(line)
+        if i + chunk_size >= len(sentences):
+            break
     return chunks
   
 
@@ -147,7 +153,7 @@ class ChunkedSemanticSearch(SemanticSearch):
         chunk_metadata = []
         for document in documents:
             self.document_map[document["id"]] = document
-            if document["description"] == "":
+            if document["description"] == "" or document["description"] == " ":
                 continue
             sem_chunks = semantic_chunk(document["description"], 4, 1)
             for i, chunk in enumerate(sem_chunks):
