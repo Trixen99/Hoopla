@@ -181,6 +181,12 @@ class ChunkedSemanticSearch(SemanticSearch):
         else:
             self.chunk_embeddings = self.build_chunk_embeddings(documents)
         return self.chunk_embeddings
+    
+    def search_chunks(self, query: str, limit: int = 10):
+        embedded_query = self.generate_embedding(query)
+        chunk_scores = []
+        
+
         
 
 
