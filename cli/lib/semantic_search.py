@@ -185,6 +185,18 @@ class ChunkedSemanticSearch(SemanticSearch):
     def search_chunks(self, query: str, limit: int = 10):
         embedded_query = self.generate_embedding(query)
         chunk_scores = []
+        for i, chunk_embed in enumerate(self.chunk_embeddings):
+            calculation = (cosine_similarity(self.chunk_embeddings[chunk_embed["chunk_idx"]], embedded_query))
+            chunk_scores.append({"chunk_idx": chunk_embed["chunk_idx"], "movie_idx": chunk_embed["movie_idx"], "score": calculation})
+        
+
+
+
+
+            tup = (cosine_similarity(self.embeddings[i], query_embed), self.document_map[key])
+
+            chunk_metadata.extend([{"movie_idx": document["id"], "chunk_idx": i, "total_chunks": len(sem_chunks)}])
+
         
 
         
