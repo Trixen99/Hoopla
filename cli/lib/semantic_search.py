@@ -3,6 +3,8 @@ import numpy as np
 import os
 import json
 import re
+from sear
+
 
 
 def verify_model():
@@ -186,9 +188,43 @@ class ChunkedSemanticSearch(SemanticSearch):
         embedded_query = self.generate_embedding(query)
         chunk_scores = []
         for i, chunk_embed in enumerate(self.chunk_embeddings):
-            calculation = (cosine_similarity(self.chunk_embeddings[chunk_embed["chunk_idx"]], embedded_query))
-            chunk_scores.append({"chunk_idx": chunk_embed["chunk_idx"], "movie_idx": chunk_embed["movie_idx"], "score": calculation})
+            calculation = (cosine_similarity(chunk_embed, embedded_query))
+            chunk_scores.append({"chunk_idx": self.chunk_metadata[i]["chunk_idx"], "movie_idx": self.chunk_metadata[i]["movie_idx"], "score": calculation})
         
+
+
+        movie_scores = {}
+        for chunk in chunk_scores:
+            if chunk["movie_idx"] not in movie_scores or chunk["score"] > movie_scores[chunk["movie_idx"]]:
+                movie_scores[chunk["movie_idx"]] = chunk["score"]
+
+        movie_scores_list = list(sorted(movie_scores.items(), key= lambda x:x[1], reverse=True))[:limit]
+
+
+        results = []
+        for key, value in movie_scores_list:
+            document = self.documents[key]
+            results.append({
+                "id": document["id"],
+                "title": document["title"],
+                "document": document["description"][:100],
+                "score": value,
+                "metadata": {}
+            })
+        found_movie = False 
+        for metadata in self.chunk_metadata:
+            if found_movie == True and metadata["movie_idx"] != document["id"]:
+                break
+            else:
+                
+
+
+
+
+        
+
+
+
 
 
 
