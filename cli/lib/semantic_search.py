@@ -3,7 +3,7 @@ import numpy as np
 import os
 import json
 import re
-from sear
+
 
 
 
@@ -179,7 +179,7 @@ class ChunkedSemanticSearch(SemanticSearch):
         if os.path.exists(os.path.abspath("cache/chunk_embeddings.npy")) and os.path.exists(os.path.abspath("cache/chunk_metadata.json")):
             self.chunk_embeddings = np.load("cache/chunk_embeddings.npy")
             with open(os.path.abspath("cache/chunk_metadata.json"), 'r') as f:
-                self.chunk_metadata = json.load(f)
+                self.chunk_metadata = json.load(f)["chunks"]
         else:
             self.chunk_embeddings = self.build_chunk_embeddings(documents)
         return self.chunk_embeddings
@@ -211,27 +211,8 @@ class ChunkedSemanticSearch(SemanticSearch):
                 "score": value,
                 "metadata": {}
             })
-        found_movie = False 
-        for metadata in self.chunk_metadata:
-            if found_movie == True and metadata["movie_idx"] != document["id"]:
-                break
-            else:
-                
+        return results
 
-
-
-
-        
-
-
-
-
-
-
-
-            tup = (cosine_similarity(self.embeddings[i], query_embed), self.document_map[key])
-
-            chunk_metadata.extend([{"movie_idx": document["id"], "chunk_idx": i, "total_chunks": len(sem_chunks)}])
 
         
 
