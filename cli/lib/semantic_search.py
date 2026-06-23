@@ -69,10 +69,16 @@ def chunk_text(text, size, overlap):
 
 
 def semantic_chunk(text, chunk_size, overlap):
-    sentences = re.split(r"(?<=[.!?])\s+", text)
+    s_text = text.strip()
+    if len(s_text) == 0:
+        return []
+    sentences = re.split(r"(?<=[.!?])\s+", s_text)
+
+    if len(sentences) == 1 and sentences[-1][-1] not in ['.','!','?']:
+        sentences = [s_text]
     chunks = []
     for i in range(0, len(sentences), chunk_size - overlap):
-        line = " ".join(sentences[i:i + chunk_size])
+        line = " ".join(sentences[i:i + chunk_size]).strip()
         if len(line) > 0:
             chunks.append(line)
         if i + chunk_size >= len(sentences):
@@ -153,14 +159,14 @@ class ChunkedSemanticSearch(SemanticSearch):
         self.documents = documents
         chunks = []
         chunk_metadata = []
-        for document in documents:
+        for movie_idx, document in enumerate(documents):
             self.document_map[document["id"]] = document
             if document["description"] == "" or document["description"] == " ":
                 continue
             sem_chunks = semantic_chunk(document["description"], 4, 1)
             for i, chunk in enumerate(sem_chunks):
                 chunks.append(chunk)
-                chunk_metadata.extend([{"movie_idx": document["id"], "chunk_idx": i, "total_chunks": len(sem_chunks)}])
+                chunk_metadata.extend([{"movie_idx": movie_idx, "chunk_idx": i, "total_chunks": len(sem_chunks)}])
 
         self.chunk_embeddings = self.model.encode(chunks, show_progress_bar=True)
         self.chunk_metadata = chunk_metadata
@@ -201,6 +207,7 @@ class ChunkedSemanticSearch(SemanticSearch):
         movie_scores_list = list(sorted(movie_scores.items(), key= lambda x:x[1], reverse=True))[:limit]
 
 
+
         results = []
         for key, value in movie_scores_list:
             document = self.documents[key]
@@ -212,6 +219,8 @@ class ChunkedSemanticSearch(SemanticSearch):
                 "metadata": {}
             })
         return results
+
+    
 
 
         
