@@ -30,7 +30,7 @@ class HybridSearch:
         self.semantic_search = ChunkedSemanticSearch()
         self.semantic_search.load_or_create_chunk_embeddings(documents)
         self.idx = InvertedIndex()
-        if not os.path.exists(self.idx.index_path):
+        if self.idx.load() != None:
             self.idx.build()
             self.idx.save()
 
@@ -39,7 +39,10 @@ class HybridSearch:
         return self.idx.bm25_search(query, limit)
 
     def weighted_search(self, query: str, alpha: float, limit: int = 5) -> list[dict]:
-        raise NotImplementedError("Weighted hybrid search is not implemented yet.")
+        idx_search = self.idx.bm25_search(query, limit*500)
+        sem_search = self.semantic_search.search_chunks(query, limit*500)
+        print(idx_search[0])
+        print(sem_search[0])
 
     def rrf_search(self, query: str, k: int, limit: int = 10) -> list[dict]:
         raise NotImplementedError("RRF hybrid search is not implemented yet.")
