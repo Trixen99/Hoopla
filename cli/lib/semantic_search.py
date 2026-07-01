@@ -208,6 +208,7 @@ class ChunkedSemanticSearch(SemanticSearch):
 
 
 
+
         results = []
         for key, value in movie_scores_list:
             document = self.documents[key]

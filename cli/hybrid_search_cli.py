@@ -10,8 +10,8 @@ def main() -> None:
 
     weighted_search_parser = subparsers.add_parser("weighted-search", help="Search both with keyword & semantic")
     weighted_search_parser.add_argument("query", type=str, help="text to search")
-    weighted_search_parser.add_argument("--alpha", nargs='*', default=0.5, type=float, help="constant to dynamically control the weighting between the scores")
-    weighted_search_parser.add_argument("--limit", nargs='*', default=5, type=float, help="limit")
+    weighted_search_parser.add_argument("--alpha", default=0.5, type=float, help="constant to dynamically control the weighting between the scores")
+    weighted_search_parser.add_argument("--limit", default=5, type=int, help="limit")
 
 
 
